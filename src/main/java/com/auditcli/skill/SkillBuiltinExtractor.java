@@ -1,7 +1,10 @@
 package com.auditcli.skill;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -12,8 +15,8 @@ import java.util.List;
  *
  * 解压策略：通过 .version 文件标记当前 jar 内置版本。版本一致跳过；不一致或缺失则覆盖整个目录。
  *
- * 内置 skill 文件清单为硬编码（避免 jar 内 resource walk 的跨平台问题），
- * 当前覆盖：web-access skill 的 SKILL.md / cdp-cheatsheet.md / 6 个 site-patterns。
+ * 小型内置 skill 文件清单可硬编码；大型 skill 可用 manifest.txt 列出资源，
+ * 避免 jar 内 resource walk 的跨平台问题。
  */
 public final class SkillBuiltinExtractor {
 
@@ -30,7 +33,8 @@ public final class SkillBuiltinExtractor {
                     "references/site-patterns/x.com.md",
                     "references/site-patterns/xiaohongshu.com.md",
                     "references/site-patterns/zhuanlan.zhihu.com.md"
-            ))
+            )),
+            new BuiltinSkillSpec("audit-code", manifestFiles("audit-code"))
     );
 
     private final Path cacheRoot;
@@ -96,6 +100,25 @@ public final class SkillBuiltinExtractor {
                         } catch (IOException ignored) {
                         }
                     });
+        }
+    }
+
+    private static List<String> manifestFiles(String skillName) {
+        String resourcePath = "skills/" + skillName + "/manifest.txt";
+        try (InputStream in = SkillBuiltinExtractor.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                System.err.println("⚠️ 内置 skill manifest 缺失: " + resourcePath);
+                return List.of("SKILL.md");
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                return reader.lines()
+                        .map(String::trim)
+                        .filter(line -> !line.isEmpty() && !line.startsWith("#"))
+                        .toList();
+            }
+        } catch (IOException e) {
+            System.err.println("⚠️ 读取内置 skill manifest 失败: " + resourcePath + ": " + e.getMessage());
+            return List.of("SKILL.md");
         }
     }
 
