@@ -1,5 +1,3 @@
-!src/main/resources/skills/**/*.md
-
 # 环境变量文件（包含敏感信息）
 .env
 .auditcli/
@@ -22,6 +20,7 @@ Thumbs.db
 
 # 文档（不上传）
 *.md
+!src/main/resources/skills/**/*.md
 docs/
 demo/
 img/
